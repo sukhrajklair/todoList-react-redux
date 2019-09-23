@@ -83,31 +83,64 @@ const TodoList = ({
   </ul>
 )
 
-const AddTodo = ({
-  onAddClick
+//Created this new container component to contain TodoList presentational component
+class VisibleTodoList extends React.Component{
+  //In this app we re-render the whole application inside the render() function which is subscribed to the createStore
+  //However, it's not ideal to render the whole app on a minor change in the state
+  //Therefore, it makes more sense to move the subscription into individual components using lifecycle method
+  componentDidMount(){
+    //function to unsubscribe is returned when we call the subscribe method
+    //assigning the return to this.unsubscribe field will allow us to invoke it later inside another lifecycle method
+    this.unsubscribe = todoAppStore.subscribe(()=>
+      this.forceUpdate())
+  }
+  //It's also important to unsubscribe inside the componentWillUnmount
+  componentWillUnmount(){
+    this.unsubscribe();
+  }
+  render(){
+    const props=this.props;
+    const state=todoAppStore.getState();
+
+    return(
+      <TodoList
+        todos={getVisibleTodos(state.todos,state.visibilityFilter)}
+        onTodoClick={todoId=>
+          todoAppStore.dispatch({
+            type: 'TOGGLE_TODO',
+            id: todoId})
+        }
+      />
+    )
+  }
 }
-) => {
+
+//Changed this back to a container component containing its own dispatch callback
+const AddTodo = () => {
   let input;
 
   return(
     <div>
       <input ref={node=>{input=node}} />
       <button onClick = {()=>{
-        onAddClick(input.value);
+        todoAppStore.dispatch({
+          type:'ADD_TODO',
+          id: nextTodoId++,
+          text:input.value
+        })
         input.value='';
       }}>Add Todo</button>
     </div>
   )
 }
 
-//create a new Filter link Component
-const FilterLink = ({
-  filter,
-  currentFilter,
+//Link is just a presentational component
+const Link = ({
+  active,
   children,
   onClick
 }) => {
-  if (filter===currentFilter){
+  if (active){
     return(
       <span>{children}</span>
     );
@@ -116,26 +149,63 @@ const FilterLink = ({
     <a href='#'
       onClick={e=> {
         e.preventDefault();
-        onClick(filter);
+        onClick();
       }}
     >
       {children}
     </a>
   );
 };
+//Split up FilterLink into two components: FilterLink as Container Component and Link as presentational component
+class FilterLink extends React.Component{
+  //In this app we re-render the whole application inside the render() function which is subscribed to the createStore
+  //However, it's not ideal to render the whole app on a minor change in the state
+  //Therefore, it makes more sense to move the subscription into individual components using lifecycle method
+  componentDidMount(){
+    //function to unsubscribe is returned when we call the subscribe method
+    //assigning the return to this.unsubscribe field will allow us to invoke it later inside another lifecycle method
+    this.unsubscribe = todoAppStore.subscribe(()=>
+      this.forceUpdate())
+  }
+  //It's also important to unsubscribe inside the componentWillUnmount
+  componentWillUnmount(){
+    this.unsubscribe();
+  }
+  render(){
+    const props= this.props;
+    const state = todoAppStore.getState();
 
-const Footer = ({
-  visibilityFilter,
-  onFilterClick
-})=>(
+    return(
+      <Link
+        active = {
+          props.filter ===
+          state.visibilityFilter
+        }
+        onClick = {()=>{
+          todoAppStore.dispatch({
+            type: 'SET_VISIBILITY_FILTER',
+            filter: props.filter
+          })
+        }}
+      >
+        {props.children}
+      </Link>
+    )
+  }
+}
+
+//Footer has been converted to a presentational component as well,
+//It doesn't pass the state info to FilterLink anymore
+//FilterLink gets the state itself
+const Footer = ()=>(
   <p>
     Show:
     {' '}
-    <FilterLink filter='SHOW_ALL' currentFilter={visibilityFilter} onClick = {onFilterClick} >All</FilterLink>
+    <FilterLink filter='SHOW_ALL'>All</FilterLink>
     {' '}
-    <FilterLink filter='SHOW_ACTIVE' currentFilter={visibilityFilter} onClick = {onFilterClick} >Active</FilterLink>
+    <FilterLink filter='SHOW_ACTIVE'>Active</FilterLink>
     {' '}
-    <FilterLink filter='SHOW_COMPLETED' currentFilter={visibilityFilter} onClick = {onFilterClick} >Complteted</FilterLink>
+    <FilterLink filter='SHOW_COMPLETED'>Complteted</FilterLink>
   </p>
 )
 
@@ -156,53 +226,28 @@ const getVisibleTodos = (
 }
 //create React component to render the list
 let nextTodoId=0;
-const TodoApp = ({
-  todos,
-  visibilityFilter
-})=>(
+//Changed AddTodo and Footer to container components
+//Created a new containter component VisibleTodoList for TodoList component
+//Each container component subscribe to the store directly
+const TodoApp = ()=>(
   <div>
-    <AddTodo
-      onAddClick={value=>
-        todoAppStore.dispatch({
-          type:'ADD_TODO',
-          id: nextTodoId++,
-          text:value,
-        })
-      }
-    />
-    <TodoList
-      todos={getVisibleTodos(todos,visibilityFilter)}
-      onTodoClick={todoId=>
-        todoAppStore.dispatch({
-          type: 'TOGGLE_TODO',
-          id: todoId})
-      }
-    />
-    <Footer
-      visibilityFilter={visibilityFilter}
-      onFilterClick = {filter=>
-        todoAppStore.dispatch({
-          type:'SET_VISIBILITY_FILTER',
-          filter
-        }
-      )}
-      />
+    <AddTodo  />
+    <VisibleTodoList />
+    <Footer />
   </div>
 );
 
 
-const render=()=>{
-  ReactDOM.render(
-    //<TodoApp todos={todoAppStore.getState().todos} filter={todoAppStore.getState().visibilityFilter} />,
-    <TodoApp
-      {...todoAppStore.getState()}
-    />,
-    document.getElementById('root')
-  )
-}
+//Only need to render the app once
+//The container components inside the app are indvidually subscribed to the store and render automatically whenever there is a change in the store
+ReactDOM.render(
+  //<TodoApp todos={todoAppStore.getState().todos} filter={todoAppStore.getState().visibilityFilter} />,
+  <TodoApp />,
+  document.getElementById('root')
+)
 
-todoAppStore.subscribe(render);
-render();
+//todoAppStore.subscribe(render);
+//render();
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
