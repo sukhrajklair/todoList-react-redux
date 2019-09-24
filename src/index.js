@@ -49,7 +49,7 @@ const visibilityFilter = (state='SHOW_ALL', action) => {
 //combine all of the reducers into one reducer
 const todoAppReducer = combineReducers({todos,visibilityFilter})
 //create react store
-const todoAppStore = createStore(todoAppReducer);
+//const todoAppStore = createStore(todoAppReducer);
 
 const Todo =({
   onClick,
@@ -91,7 +91,8 @@ class VisibleTodoList extends React.Component{
   componentDidMount(){
     //function to unsubscribe is returned when we call the subscribe method
     //assigning the return to this.unsubscribe field will allow us to invoke it later inside another lifecycle method
-    this.unsubscribe = todoAppStore.subscribe(()=>
+    const{store} = this.context;
+    this.unsubscribe = store.subscribe(()=>
       this.forceUpdate())
   }
   //It's also important to unsubscribe inside the componentWillUnmount
@@ -99,14 +100,15 @@ class VisibleTodoList extends React.Component{
     this.unsubscribe();
   }
   render(){
+    const{store} = this.context;
     const props=this.props;
-    const state=todoAppStore.getState();
+    const state=store.getState();
 
     return(
       <TodoList
         todos={getVisibleTodos(state.todos,state.visibilityFilter)}
         onTodoClick={todoId=>
-          todoAppStore.dispatch({
+          store.dispatch({
             type: 'TOGGLE_TODO',
             id: todoId})
         }
@@ -114,16 +116,21 @@ class VisibleTodoList extends React.Component{
     )
   }
 }
+//Following code is necessary to receive the context
+VisibleTodoList.contextTypes = {
+  store: React.PropTypes.object
+}
 
 //Changed this back to a container component containing its own dispatch callback
-const AddTodo = () => {
+let nextTodoId=0;
+const AddTodo = (props,{store}) => {
   let input;
 
   return(
     <div>
       <input ref={node=>{input=node}} />
       <button onClick = {()=>{
-        todoAppStore.dispatch({
+        store.dispatch({
           type:'ADD_TODO',
           id: nextTodoId++,
           text:input.value
@@ -133,7 +140,9 @@ const AddTodo = () => {
     </div>
   )
 }
-
+AddTodo.contextTypes = {
+  store: React.ProtoTypes.object
+}
 //Link is just a presentational component
 const Link = ({
   active,
@@ -164,7 +173,8 @@ class FilterLink extends React.Component{
   componentDidMount(){
     //function to unsubscribe is returned when we call the subscribe method
     //assigning the return to this.unsubscribe field will allow us to invoke it later inside another lifecycle method
-    this.unsubscribe = todoAppStore.subscribe(()=>
+    const {store}=this.context;
+    this.unsubscribe = store.subscribe(()=>
       this.forceUpdate())
   }
   //It's also important to unsubscribe inside the componentWillUnmount
@@ -173,8 +183,8 @@ class FilterLink extends React.Component{
   }
   render(){
     const props= this.props;
-    const state = todoAppStore.getState();
-
+    const state = store.getState();
+    const {store}=this.context;
     return(
       <Link
         active = {
@@ -182,7 +192,7 @@ class FilterLink extends React.Component{
           state.visibilityFilter
         }
         onClick = {()=>{
-          todoAppStore.dispatch({
+          store.dispatch({
             type: 'SET_VISIBILITY_FILTER',
             filter: props.filter
           })
@@ -193,7 +203,9 @@ class FilterLink extends React.Component{
     )
   }
 }
-
+FilterLink.contextTypes={
+  store: React.ProtoTypes.object
+}
 //Footer has been converted to a presentational component as well,
 //It doesn't pass the state info to FilterLink anymore
 //FilterLink gets the state itself
@@ -224,8 +236,7 @@ const getVisibleTodos = (
       return todos
   }
 }
-//create React component to render the list
-let nextTodoId=0;
+
 //Changed AddTodo and Footer to container components
 //Created a new containter component VisibleTodoList for TodoList component
 //Each container component subscribe to the store directly
@@ -237,12 +248,30 @@ const TodoApp = ()=>(
   </div>
 );
 
+//The provider component will take the store as its props and make it available to
+//its child and grandchild components using the getChildContext method availabe with React
+class Provider extends React.Component{
+  getChildContext(){
+    return{
+      store:this.props.store
+    };
+  }
+  render(){
+    return this.props.children;
+  }
+}
+//The following code is necessary for the context to work
+Provider.childContextTypes = {
+  store: React.ProtoTypes.object
+}
 
 //Only need to render the app once
 //The container components inside the app are indvidually subscribed to the store and render automatically whenever there is a change in the store
 ReactDOM.render(
   //<TodoApp todos={todoAppStore.getState().todos} filter={todoAppStore.getState().visibilityFilter} />,
-  <TodoApp />,
+  <Provider store={createStore(todoAppReducer)}>
+    <TodoApp />
+  </Provider>,
   document.getElementById('root')
 )
 
