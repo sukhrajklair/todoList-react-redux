@@ -42,4 +42,4 @@ const visibilityFilter = (state='SHOW_ALL', action) => {
 }
 
 //combine all of the reducers into one reducer
-export const todoAppReducer = combineReducers({todos,visibilityFilter})
+export const reducer = combineReducers({todos,visibilityFilter})
