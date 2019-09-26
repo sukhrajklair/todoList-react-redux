@@ -2,26 +2,15 @@ import React from 'react';
 import {TodoList} from './TodoList.js';
 import {toggleTodo} from '../actions/actions.js';
 import {connect} from 'react-redux';
+import {withRouter} from 'react-router-dom';
+import {getVisibleTodos} from '../reducers/reducer';
 
-const getVisibleTodos = (
-  todos,
-  filter
-) => {
-  switch (filter) {
-    case 'SHOW_ALL':
-      return todos;
-    case 'SHOW_COMPLETED':
-      return todos.filter(t=>t.completed);
-    case 'SHOW_ACTIVE':
-      return todos.filter(t=>!t.completed);
-    default:
-      return todos
-  }
-}
 
-const mapStateToTodoListProps = (state) => {
+const mapStateToTodoListProps = (state, ownProps) => {
+  //changed the source of filter from the redux store to the it's own props. Used withRouter()
+  //to inject paramas into the connected component
   return{
-    todos: getVisibleTodos(state.todos,state.visibilityFilter)
+    todos: getVisibleTodos(state,ownProps.match.params.filter||'all')
   };
 };
 
@@ -40,7 +29,8 @@ const mapDispatchToTodoListProps = (dispatch)=>{
 //The connect function results in a container component that renders the presentational component passed to it
 //It will calculate the props to be passed to the presentational component by merging the object returned from
 //the mapStateToProps() and mapDispatchToProps() functions
-export const VisibleTodoList = connect(
+//withRouter makes the url params
+export const VisibleTodoList = withRouter(connect(
   mapStateToTodoListProps,
   mapDispatchToTodoListProps
-)(TodoList);
+)(TodoList));

@@ -6,12 +6,15 @@ import {Footer} from './Footer'
 //Changed AddTodo and Footer to container components
 //Created a new containter component VisibleTodoList for TodoList component
 //Each container component subscribe to the store directly
-const App = ()=>(
+//match props is provided by the router from the path url
+const App = ()=>{
+  console.log('rendered app');
+  return(
   <div>
     <AddTodo  />
     <VisibleTodoList />
     <Footer />
-  </div>
-);
+  </div>);
+};
 
 export default App;
