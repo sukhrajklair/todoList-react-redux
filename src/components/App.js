@@ -8,7 +8,6 @@ import {Footer} from './Footer'
 //Each container component subscribe to the store directly
 //match props is provided by the router from the path url
 const App = ()=>{
-  console.log('rendered app');
   return(
   <div>
     <AddTodo  />
