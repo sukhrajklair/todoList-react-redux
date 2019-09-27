@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import * as serviceWorker from './serviceWorker';
 import Root from './components/Root'
 import configureStore from './configureStore';
+import {fetchTodos} from './api';
+
 const store = configureStore();
 
 //The provider component will take the store as its props and make it available to
