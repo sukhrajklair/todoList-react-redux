@@ -1,9 +1,10 @@
 import React, {Component} from 'react';
-import {TodoList} from './TodoList.js';
-import * as actions from '../actions/actions.js';
+import {TodoList} from './TodoList';
+import FetchError from './FetchError';
+import * as actions from '../actions/actions';
 import {connect} from 'react-redux';
 import {withRouter} from 'react-router-dom';
-import {getVisibleTodos} from '../reducers/reducer';
+import {getVisibleTodos, getIsFetching, getErrorMessage} from '../reducers/reducer';
 
 class VisibleTodoList extends Component{
   componentDidMount(){
@@ -23,8 +24,14 @@ class VisibleTodoList extends Component{
     //since we have passed action object directly to connect() function, the props don't contain
     //any function called 'onTodoClick'. It only contains 'toggleTodo'. hence we destructure the
     //props to pass toggleTodo as onTodoClick props to TodoList
-    const {toggleTodo, ...rest} = this.props;
-    return <TodoList {...rest} onTodoClick = {toggleTodo}/>;
+    const {toggleTodo, todos, errorMessage, isFetching} = this.props;
+    if (isFetching && !todos.length){
+      return <p>Loading...</p>
+    }
+    if (errorMessage && !todos.length){
+      return <FetchError message = {errorMessage} onRetry = {()=>this.fetchData()} />
+    }
+    return <TodoList todos={todos} onTodoClick = {toggleTodo}/>;
   }
 }
 const mapStateToTodoListProps = (state, ownProps) => {
@@ -33,6 +40,8 @@ const mapStateToTodoListProps = (state, ownProps) => {
   const filter = ownProps.match.params.filter||'all'
   return{
     todos: getVisibleTodos(state,filter),
+    isFetching: getIsFetching(state, filter),
+    errorMessage: getErrorMessage(state, filter),
     filter,
   };
 };

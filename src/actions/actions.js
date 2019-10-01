@@ -1,24 +1,53 @@
-//the following function allows you create a unique id everytime it's called. It is useful in assigning list items id in react
-import { v4 } from 'node-uuid';
+import { normalize } from 'normalizr';
+import * as schema from './schema';
 import * as api from '../api';
+import {getIsFetching} from '../reducers/reducer';
 
-const receiveTodos = (filter, response)=>({
-  type:'RECEIVE_TODOS',
-  filter,
-  response,
-});
-
-export const fetchTodos = (filter)=>
-  api.fetchTodos(filter).then(response =>
-    receiveTodos(filter,response)
+export const fetchTodos = (filter)=>(dispatch,getState)=>{
+  //if a request with this filter is already fetching, don't make another request
+  if (getIsFetching(getState(),filter)){
+    return Promise.resolve();
+  }
+  dispatch({
+    type:'FETCH_TODOS_REQUEST',
+    filter,
+  });
+  return api.fetchTodos(filter).then(
+    response =>{
+      console.log(
+        'normalized response',
+        normalize(response, schema.arrayOfTodos)
+      );
+      dispatch({
+        type:'FETCH_TODOS_SUCCESS',
+        filter,
+        response,
+      });
+  },
+  error=> {
+    dispatch({
+      type:'FETCH_TODOS_FAILURE',
+      filter,
+      message: error.message || 'something went wrong'
+    })
+  }
 );
+};
+
 
 //action creators : mostly for documenting the code and better organization
-export const addTodo = (text) => ({
-  type: 'ADD_TODO',
-  id: v4(),
-  text
-});
+export const addTodo = (text) => (dispatch) =>
+  api.addTodo(text).then(response=>{
+    console.log(
+      'normalized response',
+      normalize(response, schema.todo)
+    );
+    dispatch({
+      type:'ADD_TODO_SUCCESS',
+      response,
+    });
+  });
+
 
 export const toggleTodo = (id) => ({
   type: 'TOGGLE_TODO',
